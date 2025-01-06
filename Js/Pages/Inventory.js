@@ -1,6 +1,6 @@
-// InventoryHandler
-// h_a.m
-// 12-30-24
+// Inventory.js
+// landjam
+// 12-30-24 (Updated 1-6-25)
 
 
 
