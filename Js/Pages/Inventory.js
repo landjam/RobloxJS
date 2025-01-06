@@ -18,8 +18,11 @@ class InventoryHandler {
         this.itemTemplate = this.container.querySelector(".InventoryItemTemplate");
         this.addButtonTemplate = document.querySelector(".AddButton");
         this.requestButtonTemplate = document.querySelector(".RequestButton");
+        this.removeOfferTemplate = document.querySelector(".RemoveFromOffer");
         this.ownedByUser = this.container.getAttribute("ownedbyuser");
         this.correspondingOffer = this.ownedByUser == "True" ? document.querySelector('.OfferList[list-id="OfferList0"]') : document.querySelector('.OfferList[list-id="OfferList1"]');
+        this.offerItemsLocation = this.correspondingOffer.querySelector(".OfferItems");
+        this.offerValue = this.correspondingOffer.querySelector(".OfferValue");
         this.blankTemplate = document.querySelector(".BlankItem");
         this.category = this.categoryDropdown.value;
         this.imageCache = new Map();
@@ -28,6 +31,7 @@ class InventoryHandler {
         this.isLoading = false;
         this.offeredItems = [];
         this.requestedItems = [];
+        this.target = this.ownedByUser == "True" ? this.offeredItems : this.requestedItems;
         this.allItems = {};
         this.pages = {};
         this.totalPages = {};
@@ -159,18 +163,16 @@ class InventoryHandler {
         items.forEach(item => {
             const itemElement = this.itemTemplate.cloneNode(true);
             let template = this.requestButtonTemplate;
-            let target = this.requestedItems;
             itemElement.style.display = "block";
             
             if (this.ownedByUser == "True") {
                 template = this.addButtonTemplate;
-                target = this.offeredItems;
             }
 
             let clone = template.cloneNode(true);
             let cloneBtn = clone.querySelector(".TradeItemSilverButton");
 
-            if (target.includes(item.userAssetId)) {
+            if (this.target.includes(item.userAssetId)) {
                 cloneBtn.classList.replace("TradeItemSilverButton", "TradeItemSilverButtonDisabled");
             }
 
@@ -193,12 +195,11 @@ class InventoryHandler {
                 let disabled = cloneBtn.classList.contains("TradeItemSilverButtonDisabled");
                 
                 if (disabled) return;
-                if (target.length == 4) return;
+                if (this.target.length == 4) return;
 
                 cloneBtn.classList.replace("TradeItemSilverButton", "TradeItemSilverButtonDisabled");
-                target.push(item.userAssetId);
-                console.log(target)
-                console.log(`Selected ${item.userAssetId}!`);
+                this.target.push(item.userAssetId);
+                this.addToOffer(itemElement, cloneBtn, item.userAssetId);
             });
 
             this.inventoryHandle.appendChild(itemElement);
@@ -207,7 +208,7 @@ class InventoryHandler {
 
     async fetchThumbnails(assetIds) {
         const chunks = [];
-        const preUrl = new URL("https://thumbnails.roblox.com/v1/assets"); //`https://thumbnails.roblox.com/v1/assets?size=75x75&format=png&assetids=${chunk.join(",")}`;
+        const preUrl = new URL("https://thumbnails.roblox.com/v1/assets");
         preUrl.searchParams.append("size", "75x75");
         preUrl.searchParams.append("format", "png");
         
@@ -217,7 +218,6 @@ class InventoryHandler {
 
         preUrl.searchParams.append("assetids", chunks.join(","));
 
-        // for (const chunk of chunks) {
         const url = `https://ro-proxy.hamblo.xyz/?url=${encodeURIComponent(preUrl.toString())}`;
 
         console.log(preUrl);
@@ -236,7 +236,6 @@ class InventoryHandler {
         } catch (error) {
             console.error("Failed to fetch thumbnails:", error);
         }
-        // }
     }
 
     async handleCategoryChange() {
@@ -251,25 +250,54 @@ class InventoryHandler {
     initializeOffer() {
         Array.from({ length: 4 }, (x, i) => {
             let blankTemplate = this.blankTemplate.cloneNode(true);
-            let itemsLocation = this.correspondingOffer.querySelector(".OfferItems");
             blankTemplate.dataset.offerId = i;
-            itemsLocation.appendChild(blankTemplate);
+            this.offerItemsLocation.appendChild(blankTemplate);
         });
     }
 
-    addToOffer(userAssetId) {
-        let assetInfo = this.allItems[this.category].userAssetId;
-        let assetImage = this.imageCache.get(userAssetId);
+    addToOffer(itemContainer, sendingButton, userAssetId) {
+        let itemClone = itemContainer.cloneNode(true); // keeps all info so we don't have to refill it
+        let buttonContainer = itemClone.querySelector(".TradeItemSilverButtonContainer");
+        let averagePrice = itemClone.querySelector(".InventoryItemAveragePrice").textContent; // this is inefficient (I think? idk tables are cooler at least)
+        let newButton = this.removeOfferTemplate.cloneNode(true);
+        let offerIndex = this.target.indexOf(userAssetId);
 
-        // should actualy do it from the event and call this to initialize the remove event for the offer item. It's just a clone of the LargeInventoryItem inside of the BlankItem with the id of the corresponding index in the offer array. Only difference is it needs to be renamed to SmallInventoryItem
+        itemClone.classList.replace("LargeInventoryItem", "SmallInventoryItem");
+        this.offerValue.textContent = Number(this.offerValue.textContent) + Number(averagePrice);
+        buttonContainer.parentNode.appendChild(newButton);
+        buttonContainer.remove();
+
+        if (offerIndex < 0) return; // wat how
+
+        newButton.addEventListener("click", () => {
+            this.target.splice(this.target.indexOf(userAssetId), 1)
+            itemClone.remove();
+            sendingButton.classList.replace("TradeItemSilverButtonDisabled", "TradeItemSilverButton");
+
+            this.offerValue.textContent = Number(this.offerValue.textContent) - Number(averagePrice);
+
+            this.rearrangeOfferSlots();
+        });
+
+        let offerSlot = this.offerItemsLocation.querySelector(`[data-offer-id="${offerIndex}"]`);
+        offerSlot.appendChild(itemClone);
+    }
+
+    rearrangeOfferSlots() {
+        let offerSlots = this.offerItemsLocation.querySelectorAll("[data-offer-id]");
+        let items = Array.from(offerSlots)
+            .map(slot => slot.firstElementChild)
+            .filter(item => item);
+
+        offerSlots.forEach(slot => slot.innerHTML = "");
+
+        items.forEach((item, index) => {
+            let slot = this.offerItemsLocation.querySelector(`[data-offer-id="${index}"]`);
+            slot.appendChild(item);
+        });
     }
 }
 
-// Initialize Inventory Handlers for each container
-// const userInventory1 = new InventoryHandler("ctl00_cphRoblox_InventoryControl1_InventoryContainer");
-// const userInventory2 = new InventoryHandler("ctl00_cphRoblox_InventoryControl2_InventoryContainer");
-
-// exports
 window.Roblox = window.Roblox || {};
 window.Roblox.InventoryControl = window.Roblox.InventoryControl || {};
 window.Roblox.InventoryControl.InventoryHandler = InventoryHandler;
