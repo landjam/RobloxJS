@@ -1,6 +1,6 @@
 // Inventory.js
 // landjam
-// 12-30-24 (Updated 1-6-25)
+// 12-30-24 (Updated 1-11-25)
 
 
 
@@ -75,11 +75,11 @@ class InventoryHandler {
             const response = await fetch(`https://ro-proxy.hamblo.xyz/?url=${encodeURIComponent(url.toString())}`);
             const data = await response.json();
 
-            if (data.data) {
-                this.allItems[category] = this.allItems[category].concat(data.data);
-                this.pageCursors[category] = data.nextPageCursor;
-                this.updateCategoryPages(category);
-            }
+            if (!data.data) return; // should probably implement some error handling soon
+
+            this.allItems[category] = this.allItems[category].concat(data.data);
+            this.pageCursors[category] = data.nextPageCursor;
+            this.updateCategoryPages(category);
         } catch (error) {
             console.error("Error loading inventory:", error);
         }
@@ -226,13 +226,14 @@ class InventoryHandler {
         try {
             const response = await fetch(url);
             const data = await response.json();
-            if (data.data) {
-                data.data.forEach(entry => {
-                    if (entry.state === "Completed") {
-                        this.imageCache.set(entry.targetId, entry.imageUrl);
-                    }
-                });
-            }
+
+            if (!data.data) return; // should probably implement some error handling soon
+
+            data.data.forEach(entry => {
+                if (entry.state === "Completed") {
+                    this.imageCache.set(entry.targetId, entry.imageUrl);
+                }
+            });
         } catch (error) {
             console.error("Failed to fetch thumbnails:", error);
         }
