@@ -24,12 +24,17 @@ class InventoryHandler {
         this.offerItemsLocation = this.correspondingOffer.querySelector(".OfferItems");
         this.offerValue = this.correspondingOffer.querySelector(".OfferValue");
         this.blankTemplate = document.querySelector(".BlankItem");
+        this.OfferRobuxWrapper = this.correspondingOffer.querySelector(".OfferRobuxWrapper");
+        this.offeredRobux = this.OfferRobuxWrapper.querySelector(".AddRobuxBox");
+        this.offeredRobuxValue = 0;
+        this.adjustedOfferedRobuxValue = 0;
         this.category = this.categoryDropdown.value;
         this.imageCache = new Map();
         this.currentPage = 0;
         this.itemsPerPage = pageSize;
         this.isLoading = false;
         this.offeredItems = [];
+        this.offeredItemsValue = 0;
         this.requestedItems = [];
         this.target = this.ownedByUser == "True" ? this.offeredItems : this.requestedItems;
         this.allItems = {};
@@ -46,6 +51,7 @@ class InventoryHandler {
         this.categoryDropdown.addEventListener("change", () => this.handleCategoryChange());
         this.prevPageButton.addEventListener("click", () => this.loadPage(this.currentPage - 1));
         this.nextPageButton.addEventListener("click", () => this.loadPage(this.currentPage + 1));
+        this.offeredRobux.addEventListener("input", (event) => this.updateOfferedRobux(event));
     }
 
     async loadInventory() {
@@ -262,9 +268,11 @@ class InventoryHandler {
         let averagePrice = itemClone.querySelector(".InventoryItemAveragePrice").textContent; // this is inefficient (I think? idk tables are cooler at least)
         let newButton = this.removeOfferTemplate.cloneNode(true);
         let offerIndex = this.target.indexOf(userAssetId);
+        let itemValue = Number(averagePrice);
 
         itemClone.classList.replace("LargeInventoryItem", "SmallInventoryItem");
-        this.offerValue.textContent = Number(this.offerValue.textContent) + Number(averagePrice);
+        this.offeredItemsValue += itemValue;
+        this.offerValue.textContent = this.offeredItemsValue + this.adjustedOfferedRobuxValue;
         buttonContainer.parentNode.appendChild(newButton);
         buttonContainer.remove();
 
@@ -275,7 +283,8 @@ class InventoryHandler {
             itemClone.remove();
             sendingButton.classList.replace("TradeItemSilverButtonDisabled", "TradeItemSilverButton");
 
-            this.offerValue.textContent = Number(this.offerValue.textContent) - Number(averagePrice);
+            this.offeredItemsValue -= itemValue;
+            this.offerValue.textContent = this.offeredItemsValue + this.adjustedOfferedRobuxValue;
 
             this.rearrangeOfferSlots();
         });
@@ -296,6 +305,27 @@ class InventoryHandler {
             let slot = this.offerItemsLocation.querySelector(`[data-offer-id="${index}"]`);
             slot.appendChild(item);
         });
+    }
+
+    updateOfferedRobux(inputEvent) {
+        let inputValue = Number(inputEvent.target.value);
+        let afterFeeRobux = this.OfferRobuxWrapper.querySelector(".AfterFeeRobux");
+        let robuxCost = afterFeeRobux.querySelector(".RobuxCost");
+        
+        if (!inputValue) {
+            this.offerValue.textContent = this.offeredItemsValue
+            this.offeredRobuxValue = 0;
+            this.adjustedOfferedRobuxValue = 0;
+            afterFeeRobux.style.display = "none";
+            return; // not a number? no addition for you
+        }
+
+        this.offeredRobuxValue = inputValue;
+        this.adjustedOfferedRobuxValue = Math.round(this.offeredRobuxValue * 0.7); // roblox takes 30% 🤑
+
+        afterFeeRobux.style.display = "block";
+        robuxCost.textContent = this.adjustedOfferedRobuxValue;
+        this.offerValue.textContent = this.offeredItemsValue + this.adjustedOfferedRobuxValue;
     }
 }
 
