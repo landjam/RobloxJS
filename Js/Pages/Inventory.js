@@ -329,6 +329,37 @@ class InventoryHandler {
     }
 }
 
+class SendTradeHandler {
+    constructor(inventories) {
+        this.inventories = inventories;
+        this.sender = inventories.find(inv => inv.ownedByUser === "True");
+        this.receiver = inventories.find(inv => inv.ownedByUser === "False");
+        this.sendTradeButton = document.querySelector(".SendTrade");
+        this.errorTextContainer = document.querySelector(".ErrorTextContainer");
+        this.errorText = this.errorTextContainer.querySelector(".ErrorText");
+        this.offeredItems = this.sender.offeredItems;
+        this.offeredItemsValue = this.sender.offeredItemsValue
+        this.receivedItems = this.receiver.offeredItems;
+        this.receivedItemsValue = this.receiver.offeredItemsValue;
+        this.offeredRobuxValue = this.sender.offeredRobuxValue;
+        this.adjustedOfferedRobuxValue = this.sender.offeredRobuxValue;
+        this.receivedRobuxValue = this.receiver.offeredRobuxValue;
+        this.adjustedreceivedRobuxValue = this.receiver.offeredRobuxValue;
+    }
+
+    processTradeRequest() {
+        Roblox.GenericConfirmation.open({
+            titleText: Roblox.Trade.Offer.Resources.tradeSentText,
+            bodyContent: Roblox.Trade.Offer.Resources.tradeSentBody,
+            acceptText: Roblox.Trade.Offer.Resources.acceptText,
+            acceptColor: Roblox.GenericConfirmation.blue,
+            declineColor: Roblox.GenericConfirmation.none,
+            imageUrl: Roblox.Trade.Offer.Resources.thumbsUpUrl
+        });
+    }
+}
+
 window.Roblox = window.Roblox || {};
 window.Roblox.InventoryControl = window.Roblox.InventoryControl || {};
 window.Roblox.InventoryControl.InventoryHandler = InventoryHandler;
+window.Roblox.InventoryControl.SendTradeHandler = SendTradeHandler;
