@@ -6,4 +6,4 @@ My recreation of Roblox's JavaScript.
 www.roblox.com
    - /JS/
      - /Pages/
-       - [Inventory.js](/Js/Pages/Inventory.js)
+       - [Inventory.js](/Js/Pages/Inventory.js) + [setup](/Js/Pages/Inventory-setup.md)
