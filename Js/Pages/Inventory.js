@@ -35,8 +35,6 @@ class InventoryHandler {
         this.isLoading = false;
         this.offeredItems = [];
         this.offeredItemsValue = 0;
-        this.requestedItems = [];
-        this.target = this.ownedByUser == "True" ? this.offeredItems : this.requestedItems;
         this.allItems = {};
         this.pages = {};
         this.totalPages = {};
@@ -178,7 +176,7 @@ class InventoryHandler {
             let clone = template.cloneNode(true);
             let cloneBtn = clone.querySelector(".TradeItemSilverButton");
 
-            if (this.target.includes(item.userAssetId)) {
+            if (this.offeredItems.includes(item.userAssetId)) {
                 cloneBtn.classList.replace("TradeItemSilverButton", "TradeItemSilverButtonDisabled");
             }
 
@@ -201,10 +199,10 @@ class InventoryHandler {
                 let disabled = cloneBtn.classList.contains("TradeItemSilverButtonDisabled");
                 
                 if (disabled) return;
-                if (this.target.length == 4) return;
+                if (this.offeredItems.length == 4) return;
 
                 cloneBtn.classList.replace("TradeItemSilverButton", "TradeItemSilverButtonDisabled");
-                this.target.push(item.userAssetId);
+                this.offeredItems.push(item.userAssetId);
                 this.addToOffer(itemElement, cloneBtn, item.userAssetId);
             });
 
@@ -267,7 +265,7 @@ class InventoryHandler {
         let buttonContainer = itemClone.querySelector(".TradeItemSilverButtonContainer");
         let averagePrice = itemClone.querySelector(".InventoryItemAveragePrice").textContent; // this is inefficient (I think? idk tables are cooler at least)
         let newButton = this.removeOfferTemplate.cloneNode(true);
-        let offerIndex = this.target.indexOf(userAssetId);
+        let offerIndex = this.offeredItems.indexOf(userAssetId);
         let itemValue = Number(averagePrice);
 
         itemClone.classList.replace("LargeInventoryItem", "SmallInventoryItem");
@@ -279,7 +277,7 @@ class InventoryHandler {
         if (offerIndex < 0) return; // wat how
 
         newButton.addEventListener("click", () => {
-            this.target.splice(this.target.indexOf(userAssetId), 1)
+            this.offeredItems.splice(this.offeredItems.indexOf(userAssetId), 1)
             itemClone.remove();
             sendingButton.classList.replace("TradeItemSilverButtonDisabled", "TradeItemSilverButton");
 
@@ -327,6 +325,20 @@ class InventoryHandler {
         robuxCost.textContent = this.adjustedOfferedRobuxValue;
         this.offerValue.textContent = this.offeredItemsValue + this.adjustedOfferedRobuxValue;
     }
+
+    removeSpecificItem(assetIdIndex) {
+        if (!this.offeredItems.indexOf(assetIdIndex)) {
+            return console.error("something weird is going on here that I don't feel like dealing with.");
+        }
+
+        let itemValue = 0; // need to get this from all items as well as on hold in other function
+
+        this.offeredItems.splice(assetIdIndex, 1);
+        this.offeredItemsValue -= itemValue;
+        this.offerValue.textContent = this.offeredItemsValue + this.adjustedOfferedRobuxValue;
+
+        this.rearrangeOfferSlots();
+    }
 }
 
 class SendTradeHandler {
@@ -338,24 +350,85 @@ class SendTradeHandler {
         this.errorTextContainer = document.querySelector(".ErrorTextContainer");
         this.errorText = this.errorTextContainer.querySelector(".ErrorText");
         this.offeredItems = this.sender.offeredItems;
-        this.offeredItemsValue = this.sender.offeredItemsValue
         this.receivedItems = this.receiver.offeredItems;
-        this.receivedItemsValue = this.receiver.offeredItemsValue;
-        this.offeredRobuxValue = this.sender.offeredRobuxValue;
-        this.adjustedOfferedRobuxValue = this.sender.offeredRobuxValue;
-        this.receivedRobuxValue = this.receiver.offeredRobuxValue;
-        this.adjustedreceivedRobuxValue = this.receiver.offeredRobuxValue;
+        this.allSenderLoadedItems = this.sender.allItems;
+        this.allReceiverLoadedItems = this.receiver.allItems;
+        this.isCounter = new URLSearchParams(window.location.search).has('counter'); //not exactly sure how Roblox implemented it, but here's my go at it
+        this.processTradeRequest = this.processTradeRequest.bind(this); // weird issues chatgpt says this will solve
     }
 
-    processTradeRequest() {
-        Roblox.GenericConfirmation.open({
-            titleText: Roblox.Trade.Offer.Resources.tradeSentText,
-            bodyContent: Roblox.Trade.Offer.Resources.tradeSentBody,
+    async checksAndBalances() {
+        let baseDeny = {
+            titleText: Roblox.Trade.Offer.Resources.badNewsTitle,
+            bodyContent: Roblox.Trade.Offer.Resources.badNewsBody,
             acceptText: Roblox.Trade.Offer.Resources.acceptText,
             acceptColor: Roblox.GenericConfirmation.blue,
             declineColor: Roblox.GenericConfirmation.none,
-            imageUrl: Roblox.Trade.Offer.Resources.thumbsUpUrl
-        });
+            imageUrl: Roblox.Trade.Offer.Resources.alertUrl
+        };
+
+        let baseConfirm = Array.from(baseDeny);
+        baseConfirm.titleText = Roblox.Trade.Offer.Resources.tradeSentText;
+        baseConfirm.bodyContent = Roblox.Trade.Offer.Resources.tradeSentBody;
+        baseConfirm.imageUrl = Roblox.Trade.Offer.Resources.thumbsUpUrl;
+
+        if (this.offeredItems.length < 1 || this.receivedItems.length < 1) {
+            return "You must offer/request at least one item.";
+        }
+
+        if (this.offeredItems.length > 4 || this.receivedItems.length > 4) {
+            return "You can only offer/request a maximum of four items";
+        }
+
+        if (this.isCounter) {
+            // Not exactly sure if this is 100% accurate, but based off of a reference video I saw, Roblox doesn't allow you to lowball while countering.
+            // The video shows the request being worth 3006 and the offer needing to be 2255. 2255/3006 = ~75%
+            // https://youtu.be/RHjemD2Ri_0?t=21
+            let offeredTotalValue = this.sender.offeredItemsValue + this.sender.adjustedOfferedRobuxValue;
+            let receivedTotalValue = this.receiver.offeredItemsValue + this.receiver.adjustedOfferedRobuxValue;
+            let reasonablePercentage = Math.round(receivedTotalValue * 0.7);
+
+            if (offeredTotalValue < reasonablePercentage) {
+                return `Your offer must be worth at least R$${reasonablePercentage} to make this request. Add more items to your offer or trim down your request.`
+            }
+        }
+
+        const offeredDuplicateIndex = this.offeredItems.findIndex((item, idx) => this.offeredItems.indexOf(item) !== idx);
+        const receivedDuplicateIndex = this.receivedItems.findIndex((item, idx) => this.receivedItems.indexOf(item) !== idx);
+
+        console.log(this.offeredItems);
+        console.log(this.receivedItems);
+
+        if (offeredDuplicateIndex > -1 || receivedDuplicateIndex > -1) {
+            const inventoryIndex = offeredDuplicateIndex > -1 
+                ? this.inventories.indexOf(this.sender) 
+                : this.inventories.indexOf(this.receiver);
+        
+            const duplicateIndex = offeredDuplicateIndex > -1 ? offeredDuplicateIndex : receivedDuplicateIndex;
+        
+            baseDeny.onaccept = Roblox.InventoryControl.InventoryControls[inventoryIndex].removeSpecificItem(duplicateIndex);
+        
+            return baseDeny;
+        }
+        
+        return baseConfirm;
+    }
+
+    async processTradeRequest() {
+        let checkedResult = await this.checksAndBalances();
+
+        if (typeof(checkedResult) === "string") {
+            this.errorTextContainer.style.display = "block";
+            this.errorText.textContent = checkedResult;
+            return
+        }
+        
+        this.errorTextContainer.style.display = "none";
+
+        if (typeof(checkedResult) === "object") {
+            Roblox.GenericConfirmation.open(checkedResult);
+            return;
+        }
     }
 }
 
