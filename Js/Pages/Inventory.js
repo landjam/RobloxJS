@@ -368,6 +368,8 @@ class SendTradeHandler {
         };
 
         let baseConfirm = Array.from(baseDeny);
+        Object.assign(baseConfirm, baseDeny);
+        
         baseConfirm.titleText = Roblox.Trade.Offer.Resources.tradeSentText;
         baseConfirm.bodyContent = Roblox.Trade.Offer.Resources.tradeSentBody;
         baseConfirm.imageUrl = Roblox.Trade.Offer.Resources.thumbsUpUrl;
