@@ -119,7 +119,18 @@
 That should be all. I'm quite sure this is all I had to modify to get things to work well.
 
 # Gallery
-<div style="display: inline-grid;">
-<img src="images/test.png" alt="Logo" width="80" height="80">
-<img src="images/test.png" alt="Logo" width="80" height="80">
-</div>
+
+<table style="width: 100%;">
+  <tr>
+    <td style="width: 50%;"><img src="/demos/inventory/Screenshot 2025-01-22 231059.png" alt="Image 1" style="width: 100%;"></td>
+    <td style="width: 50%;"><img src="/demos/inventory/Screenshot 2025-01-22 231209.png" alt="Image 2" style="width: 100%;"></td>
+  </tr>
+  <tr>
+    <td style="width: 50%;"><img src="/demos/inventory/Screenshot 2025-01-22 233433.png" alt="Image 3" style="width: 100%;"></td>
+    <td style="width: 50%;"><img src="/demos/inventory/Screenshot 2025-01-22 233445.png" alt="Image 4" style="width: 100%;"></td>
+  </tr>
+  <tr>
+    <td style="width: 50%;"><img src="/demos/inventory/Screenshot 2025-01-22 233551.png" alt="Image 5" style="width: 100%;"></td>
+    <td style="width: 50%;"><img src="/demos/inventory/Screenshot 2025-01-22 233713.png" alt="Image 6" style="width: 100%;"></td>
+  </tr>
+</table>
