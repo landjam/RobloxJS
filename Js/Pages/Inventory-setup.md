@@ -50,7 +50,7 @@
        font-style: italic;
    }
    ```
-3. Acquire the trade window `HTML` (I can't provide it here due to legal reasons, but you should be able to find it if you ask around enough. I can send it to you if you message me on Discord.)
+3. Acquire the trade window `HTML` (I can't provide it here due to legal reasons, but you should be able to find it if you ask around enough. You can also find it on https://codepen.io/ for now by searching "tradewindow". I cannot guarantee this will last. I can send it to you if you message me on Discord.)
 4. Add references to the `CSS` and `JS` files in the `<head>` of your `tradewindow` file.
    ```html
    <link rel="stylesheet" href="/CSS/Pages/Trade/Trade.css">
